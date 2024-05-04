@@ -1,6 +1,6 @@
-use std::sync::{mpsc, Mutex, Arc};
-use std::collections::HashMap;
 use crate::threadpool::ThreadPool;
+use std::collections::HashMap;
+use std::sync::{mpsc, Arc, Mutex};
 
 pub struct PubSub {
     subscribers: Arc<Mutex<HashMap<String, Vec<Subscriber>>>>,
@@ -60,7 +60,7 @@ impl Subscriber {
     pub fn new(id: usize, sender: mpsc::Sender<String>) -> Self {
         Subscriber { id, sender }
     }
-    
+
     pub fn send(&self, message: String) -> Result<(), ()> {
         let _result = self.sender.send(message);
         Ok(())
