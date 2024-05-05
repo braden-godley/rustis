@@ -1,8 +1,10 @@
 use rustis::pubsub::PubSub;
 use rustis::threadpool::ThreadPool;
+use rustis::packetreader::RequestPacket;
 use std::io::{prelude::*, BufReader};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
+use std::str;
 
 struct ServerState {
     ps: PubSub,
@@ -28,70 +30,53 @@ pub fn start_server(threads: usize) {
     }
 }
 
-enum RustisCommand {
-    Subscribe,
-    Publish,
-    Unknown,
-}
-
 fn handle_connection(mut stream: TcpStream, state: Arc<Mutex<ServerState>>) {
     let mut buf_reader = BufReader::new(&mut stream);
-    let mut buf = String::new();
+    let mut buf = Vec::new();
 
-    let _ = buf_reader.read_line(&mut buf);
+    let _ = buf_reader.read_to_end(&mut buf);
 
-    let components: Vec<&str> = buf.split('|').map(|c| c.trim()).collect();
+    let buf: String = str::from_utf8(&buf)
+        .expect("Invalid utf-8 sequence")
+        .to_string();
 
-    let command = match *components.first().unwrap() {
-        "subscribe" => RustisCommand::Subscribe,
-        "publish" => RustisCommand::Publish,
-        _ => RustisCommand::Unknown,
-    };
+    let packet = RequestPacket::new(buf);
 
-    match command {
-        RustisCommand::Subscribe => handle_subscribe(stream, state, components),
-        RustisCommand::Publish => handle_publish(stream, state, components),
-        RustisCommand::Unknown => {
-            let _ = write_message(&mut stream, "unknown");
-        }
-    };
+    match packet {
+        RequestPacket::Subscribe { channel } => handle_subscribe(stream, state, channel),
+        RequestPacket::Publish { channel, message } => handle_publish(stream, state, channel, message),
+        RequestPacket::Invalid { error } => {
+            write_message(&mut stream, &error)
+        },
+        RequestPacket::Unknown => {
+            write_message(&mut stream, "unknown")
+        },
+    }
 }
 
-fn handle_subscribe(mut stream: TcpStream, state: Arc<Mutex<ServerState>>, components: Vec<&str>) {
-    let channel = components.get(1);
-    if channel.is_some() {
-        let mut state = state.lock().unwrap();
-        let receiver = state.ps.subscribe(channel.unwrap().to_string());
-        drop(state);
+fn handle_subscribe(mut stream: TcpStream, state: Arc<Mutex<ServerState>>, channel: String) {
+    let mut state = state.lock().unwrap();
+    let receiver = state.ps.subscribe(channel);
+    drop(state);
 
-        match receiver {
-            Ok(receiver) => {
-                loop {
-                    let message = receiver.recv().unwrap();
+    match receiver {
+        Ok(receiver) => {
+            loop {
+                let message = receiver.recv().unwrap();
 
-                    let _ = write_message(&mut stream, &message[..]);
-                }
+                let _ = write_message(&mut stream, &message[..]);
             }
-            Err(_) => (),
         }
-    } else {
-
+        Err(_) => (),
     }
 }
 
-fn handle_publish(mut stream: TcpStream, state: Arc<Mutex<ServerState>>, components: Vec<&str>) {
-    let channel = components.get(1);
-    let message = components.get(2);
-
-    if channel.is_some() && message.is_some() {
-        let mut state = state.lock().unwrap();
-        state
-            .ps
-            .publish(channel.unwrap().to_string(), message.unwrap().to_string());
-        let _ = write_message(&mut stream, "published");
-    } else {
-        let _ = write_message(&mut stream, "invalid");
-    }
+fn handle_publish(mut stream: TcpStream, state: Arc<Mutex<ServerState>>, channel: String, message: String) {
+    let mut state = state.lock().unwrap();
+    state
+        .ps
+        .publish(channel, message);
+    let _ = write_message(&mut stream, "published");
 }
 
 fn write_message(stream: &mut TcpStream, message: &str) {
