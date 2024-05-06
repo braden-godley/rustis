@@ -2,7 +2,7 @@ mod server;
 
 use clap::{arg, command, Command};
 use std::net::TcpStream;
-use std::io::{prelude::*, Write, Read, BufReader};
+use std::io::{self, Write, Read};
 
 fn main() {
     let matches = command!()
@@ -35,51 +35,62 @@ fn main() {
             .parse::<usize>()
             .expect("Invalid thread number");
 
-        server::start_server(threads);
+        server::start_server(threads)
+            .expect("Failed to start Rustis!");
+
     } else if let Some(matches) = matches.subcommand_matches("client") {
         if let Some(matches) = matches.subcommand_matches("publish") {
             let channel = matches.get_one::<String>("channel").unwrap();
             let message = matches.get_one::<String>("message").unwrap();
-            let stream = TcpStream::connect("127.0.0.1:7878");
-            if let Ok(mut stream) = stream {
-                let msg = format!("publish|{}|{}\n", channel, message);
+            let mut stream = TcpStream::connect("127.0.0.1:7878")
+                .expect("Failed to connect");
 
-                stream.write_all(msg.as_bytes()).unwrap();
+            let msg = format!("Rustis 1.0.0\npublish\n{}\n{}\n\n", channel, message);
 
-                stream.flush().unwrap();
+            stream.write_all(msg.as_bytes()).unwrap();
 
-                let mut buf = String::new();
-                stream.read_to_string(&mut buf).unwrap();
+            stream.flush().unwrap();
 
-                println!("{}", buf.to_string());
-            } else {
-                eprintln!("Failed to connect!");
-                std::process::exit(1);
-            }
+            echo_stream(&mut stream).expect("Failed to echo stream");
         } else if let Some(matches) = matches.subcommand_matches("subscribe") {
             let channel = matches.get_one::<String>("channel").unwrap();
-            let stream = TcpStream::connect("127.0.0.1:7878");
-            if let Ok(mut stream) = stream {
-                let mut buf_reader = BufReader::new(stream.try_clone().unwrap());
-                let msg = format!("subscribe|{}\n", channel);
+            let mut stream = TcpStream::connect("127.0.0.1:7878")
+                .expect("Failed to connect");
 
-                stream.write_all(msg.as_bytes()).unwrap();
+            let msg = format!("Rustis 1.0.0\nsubscribe\n{}\n\n", channel.trim());
 
-                stream.flush().unwrap();
+            stream.write_all(msg.as_bytes()).unwrap();
 
-                println!("subscribed!");
+            stream.flush().unwrap();
 
-                let mut buf = String::new();
-                loop {
-                    let _ = buf_reader.read_line(&mut buf);
-
-                    println!("{}", buf.to_string());
-                }
-            } else {
-                eprintln!("Failed to connect!");
-                std::process::exit(1);
-            }
+            echo_stream(&mut stream).expect("Failed to echo stream");
         }
     }
+}
+
+fn echo_stream(stream: &mut TcpStream) -> io::Result<()> {
+    let mut buffer = [0; 1024];
+    let mut data = Vec::new();
+
+    loop {
+        let bytes_read = stream.read(&mut buffer)?;
+
+        // End of stream
+        if bytes_read == 0 {
+            break; 
+        }
+
+        data.extend_from_slice(&buffer[..bytes_read]);
+
+        if let Some(index) = data.windows(2).position(|window| window == b"\n\n") {
+            // Process the packet
+            let packet = &data[..=index+1];
+            println!("{}", String::from_utf8_lossy(&packet));
+
+            data.drain(..=index+1);
+        }
+    }
+
+    Ok(())
 }
 
