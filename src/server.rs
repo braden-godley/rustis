@@ -49,7 +49,7 @@ fn handle_connection(mut stream: TcpStream, state: Arc<Mutex<ServerState>>) -> i
 
         if let Some(index) = data.windows(2).position(|window| window == b"\n\n") {
             // Process the packet
-            let packet = &data[..=index+1];
+            let packet = &data[..=index-1];
             process_packet(&mut stream, &state, packet)?;
 
             data.drain(..=index+1);
@@ -105,6 +105,7 @@ fn handle_publish(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, chann
 }
 
 fn write_message(stream: &mut TcpStream, message: &str) {
+    let message = format!("{}\n\n", message);
     let result = stream.write_all(message.as_bytes());
 
     match result {

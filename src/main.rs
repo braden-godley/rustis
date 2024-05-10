@@ -42,16 +42,18 @@ fn main() {
         if let Some(matches) = matches.subcommand_matches("publish") {
             let channel = matches.get_one::<String>("channel").unwrap();
             let message = matches.get_one::<String>("message").unwrap();
+            dbg!(&message);
             let mut stream = TcpStream::connect("127.0.0.1:7878")
                 .expect("Failed to connect");
 
             let msg = format!("Rustis 1.0.0\npublish\n{}\n{}\n\n", channel, message);
+            dbg!(&msg);
 
             stream.write_all(msg.as_bytes()).unwrap();
 
             stream.flush().unwrap();
 
-            echo_stream(&mut stream).expect("Failed to echo stream");
+            echo_stream(&mut stream, true).expect("Failed to echo stream");
         } else if let Some(matches) = matches.subcommand_matches("subscribe") {
             let channel = matches.get_one::<String>("channel").unwrap();
             let mut stream = TcpStream::connect("127.0.0.1:7878")
@@ -59,16 +61,18 @@ fn main() {
 
             let msg = format!("Rustis 1.0.0\nsubscribe\n{}\n\n", channel.trim());
 
+            dbg!(&msg);
+
             stream.write_all(msg.as_bytes()).unwrap();
 
             stream.flush().unwrap();
 
-            echo_stream(&mut stream).expect("Failed to echo stream");
+            echo_stream(&mut stream, false).expect("Failed to echo stream");
         }
     }
 }
 
-fn echo_stream(stream: &mut TcpStream) -> io::Result<()> {
+fn echo_stream(stream: &mut TcpStream, once: bool) -> io::Result<()> {
     let mut buffer = [0; 1024];
     let mut data = Vec::new();
 
@@ -84,10 +88,13 @@ fn echo_stream(stream: &mut TcpStream) -> io::Result<()> {
 
         if let Some(index) = data.windows(2).position(|window| window == b"\n\n") {
             // Process the packet
-            let packet = &data[..=index+1];
+            let packet = &data[..=index-1];
             println!("{}", String::from_utf8_lossy(&packet));
 
             data.drain(..=index+1);
+        }
+        if once {
+            break;
         }
     }
 

@@ -52,6 +52,7 @@ impl PubSub {
 }
 
 struct Subscriber {
+    #[allow(dead_code)]
     id: usize,
     sender: mpsc::Sender<String>,
 }
