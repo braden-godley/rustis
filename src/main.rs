@@ -32,6 +32,14 @@ fn main() {
                         .arg(arg!(<value> "New value"))
                 )
                 .subcommand(
+                    Command::new("setex")
+                        .about("Set a key's value in the KV store with an expiration time")
+                        .arg(arg!(<key> "Key to set"))
+                        .arg(arg!(<value> "New value"))
+                        .arg(arg!(<ttl> "Expiration time to live")
+                             .value_parser(clap::value_parser!(u64)))
+                )
+                .subcommand(
                     Command::new("get")
                         .about("Get a key's value in the KV store")
                         .arg(arg!(<key> "Key to get the value of"))
@@ -87,6 +95,20 @@ fn main() {
                 .expect("Failed to connect");
     
             let msg = format!("Rustis 1.0.0\nset\n{}\n{}\n\n", key.trim(), value.trim());
+
+            stream.write_all(msg.as_bytes()).unwrap();
+            stream.flush().unwrap();
+
+            echo_stream(&mut stream, true).expect("Failed to echo stream");
+        } else if let Some(matches) = matches.subcommand_matches("setex") {
+            let key = matches.get_one::<String>("key").unwrap();
+            let value = matches.get_one::<String>("value").unwrap();
+            let ttl = matches.get_one::<u64>("ttl").unwrap();
+
+            let mut stream = TcpStream::connect("127.0.0.1:7878")
+                .expect("Failed to connect");
+    
+            let msg = format!("Rustis 1.0.0\nsetex\n{}\n{}\n{}\n\n", key.trim(), ttl, value.trim());
 
             stream.write_all(msg.as_bytes()).unwrap();
             stream.flush().unwrap();
