@@ -90,6 +90,7 @@ fn process_packet(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, packe
         RequestPacket::Subscribe { channel } => handle_subscribe(stream, state, channel),
         RequestPacket::Publish { channel, message } => handle_publish(stream, state, channel, message),
         RequestPacket::Set { key, value } => handle_set(stream, state, key, value),
+        RequestPacket::Get { key } => handle_get(stream, state, key),
         RequestPacket::Invalid { error } => {
             write_message(stream, &error)
         },
@@ -130,6 +131,16 @@ fn handle_set(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, key: Stri
     let mut state = state.lock().unwrap();
     state.kv.set(&key[..], &value[..]);
     let _ = write_message(stream, "set");
+}
+
+fn handle_get(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, key: String) {
+    let state = state.lock().unwrap();
+    let val = state.kv.get(&key[..]);
+    if let Some(val) = val {
+        write_message(stream, &format!("1\n{}", &val));
+    } else {
+        write_message(stream, "0");
+    }
 }
 
 fn write_message(stream: &mut TcpStream, message: &str) {
