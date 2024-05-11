@@ -23,6 +23,13 @@ pub enum RequestPacket {
     Subscribe {
         channel: String,
     },
+    Set {
+        key: String,
+        value: String,
+    },
+    // Get {
+    //     key: String,
+    // },
     Unknown,
     Invalid {
         error: String,
@@ -81,7 +88,32 @@ impl RequestPacket {
                     }
                 },
                 "subscribe" => { 
-                    RequestPacket::Subscribe { channel: String::from("test") } 
+                    let channel = lines.get(2);
+                    if let Some(channel) = channel {
+                        RequestPacket::Subscribe { channel: channel.to_string() } 
+                    } else {
+                        RequestPacket::Invalid {
+                            error: String::from("missing channel")
+                        }
+                    }
+                },
+                "set" => {
+                    let key = lines.get(2);
+                    let value = lines.get(3..);
+                    if let Some(key) = key {
+                        if let Some(value) = value {
+                            let value = value.join("\n");
+                            RequestPacket::Set{ key: key.to_string(), value: value.to_string() }
+                        } else {
+                            RequestPacket::Invalid {
+                                error: String::from("missing value")
+                            }
+                        }
+                    } else {
+                        RequestPacket::Invalid {
+                            error: String::from("missing key")
+                        }
+                    }
                 },
                 _ => RequestPacket::Unknown,
             }
