@@ -92,6 +92,7 @@ fn process_packet(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, packe
         RequestPacket::Set { key, value } => handle_set(stream, state, key, value),
         RequestPacket::SetEx { key, ttl, value } => handle_setex(stream, state, key, ttl, value),
         RequestPacket::Get { key } => handle_get(stream, state, key),
+        RequestPacket::Ttl { key } => handle_ttl(stream, state, key),
         RequestPacket::Invalid { error } => {
             write_message(stream, &error)
         },
@@ -145,6 +146,16 @@ fn handle_get(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, key: Stri
     let val = state.kv.get(&key[..]);
     if let Some(val) = val {
         write_message(stream, &format!("1\n{}", &val));
+    } else {
+        write_message(stream, "0");
+    }
+}
+
+fn handle_ttl(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, key: String) {
+    let state = state.lock().unwrap();
+    let ttl = state.kv.ttl(&key[..]);
+    if let Some(ttl) = ttl {
+        write_message(stream, &format!("1\n{}", &ttl));
     } else {
         write_message(stream, "0");
     }
