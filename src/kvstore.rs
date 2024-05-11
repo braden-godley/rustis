@@ -69,7 +69,8 @@ impl KvStore {
                 if expired {
                     None
                 } else {
-                    Some(ttl.as_secs())
+                    let time_remaining = val.created_at.elapsed() - ttl;
+                    Some(time_remaining.as_secs())
                 }
             } else {
                 None
