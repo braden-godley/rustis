@@ -2,8 +2,10 @@ use rustis::pubsub::PubSub;
 use rustis::threadpool::ThreadPool;
 use rustis::packetreader::RequestPacket;
 use std::io::{prelude::*, self};
-use std::net::{TcpListener, TcpStream};
+use socket2::{Socket, Domain, Type, TcpKeepalive};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use std::str;
 
 struct ServerState {
@@ -13,7 +15,21 @@ struct ServerState {
 pub fn start_server(threads: usize) -> io::Result<()> {
     println!("Starting server with {threads} threads!");
 
-    let listener = TcpListener::bind("127.0.0.1:7878")?;
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
+
+    let address: SocketAddr = "127.0.0.1:7878".parse().unwrap();
+
+    socket.bind(&address.into())?;
+    socket.listen(128)?;
+
+    let keepalive = TcpKeepalive::new()
+        .with_time(Duration::from_secs(30))
+        .with_interval(Duration::from_secs(3))
+        .with_retries(4);
+
+    socket.set_tcp_keepalive(&keepalive)?;
+
+    let listener: TcpListener = socket.into();
     let ps = PubSub::new();
     let tcp_pool = ThreadPool::new(threads);
 
