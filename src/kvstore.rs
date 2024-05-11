@@ -45,14 +45,14 @@ impl KvStore {
 
         if let Some(val) = val {
             if let Some(ttl) = val.ttl {
-                let expired = val.created_at.elapsed() < ttl;
+                let expired = val.created_at.elapsed() > ttl;
                 if expired {
                     None
                 } else {
                     Some(val.val.clone())
                 }
             } else {
-                None
+                Some(val.val.clone())
             }
         } else {
             None
@@ -65,7 +65,7 @@ impl KvStore {
 
         if let Some(val) = val {
             if let Some(ttl) = val.ttl {
-                let expired = val.created_at.elapsed() < ttl;
+                let expired = val.created_at.elapsed() > ttl;
                 if expired {
                     None
                 } else {
