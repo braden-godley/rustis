@@ -44,6 +44,11 @@ fn main() {
                         .about("Get a key's value in the KV store")
                         .arg(arg!(<key> "Key to get the value of"))
                 )
+                .subcommand(
+                    Command::new("ttl")
+                        .about("Get a key's remaining expiration time in the KV store")
+                        .arg(arg!(<key> "Key to get the ttl of"))
+                )
         )
         .get_matches();
 
@@ -121,6 +126,18 @@ fn main() {
                 .expect("Failed to connect");
     
             let msg = format!("Rustis 1.0.0\nget\n{}\n\n", key.trim());
+
+            stream.write_all(msg.as_bytes()).unwrap();
+            stream.flush().unwrap();
+
+            echo_stream(&mut stream, true).expect("Failed to echo stream");
+        } else if let Some(matches) = matches.subcommand_matches("ttl") {
+            let key = matches.get_one::<String>("key").unwrap();
+
+            let mut stream = TcpStream::connect("127.0.0.1:7878")
+                .expect("Failed to connect");
+    
+            let msg = format!("Rustis 1.0.0\nttl\n{}\n\n", key.trim());
 
             stream.write_all(msg.as_bytes()).unwrap();
             stream.flush().unwrap();
