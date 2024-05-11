@@ -35,6 +35,9 @@ pub enum RequestPacket {
     Get {
         key: String,
     },
+    Ttl {
+        key: String,
+    },
     Unknown,
     Invalid {
         error: String,
@@ -155,6 +158,16 @@ impl RequestPacket {
                     let key = lines.get(2);
                     if let Some(key) = key {
                         RequestPacket::Get{ key: key.to_string() }
+                    } else {
+                        RequestPacket::Invalid {
+                            error: String::from("missing key")
+                        }
+                    }
+                },
+                "ttl" => {
+                    let key = lines.get(2);
+                    if let Some(key) = key {
+                        RequestPacket::Ttl{ key: key.to_string() }
                     } else {
                         RequestPacket::Invalid {
                             error: String::from("missing key")
