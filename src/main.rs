@@ -86,7 +86,7 @@ fn main() {
             stream.write_all(msg.as_bytes()).unwrap();
             stream.flush().unwrap();
 
-            echo_stream(&mut stream, false).expect("Failed to echo stream");
+            echo_stream(&mut stream, true).expect("Failed to echo stream");
         }
     }
 }
