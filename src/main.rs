@@ -24,7 +24,13 @@ fn main() {
                     Command::new("subscribe")
                         .about("Subscribe to a channel")
                         .arg(arg!(<channel> "Channel to subscribe to"))
-                ),
+                )
+                .subcommand(
+                    Command::new("set")
+                        .about("Set a value in the KV store")
+                        .arg(arg!(<key> "Key to set"))
+                        .arg(arg!(<value> "Value to set"))
+                )
         )
         .get_matches();
 
@@ -65,6 +71,19 @@ fn main() {
 
             stream.write_all(msg.as_bytes()).unwrap();
 
+            stream.flush().unwrap();
+
+            echo_stream(&mut stream, false).expect("Failed to echo stream");
+        } else if let Some(matches) = matches.subcommand_matches("set") {
+            let key = matches.get_one::<String>("key").unwrap();
+            let value = matches.get_one::<String>("value").unwrap();
+
+            let mut stream = TcpStream::connect("127.0.0.1:7878")
+                .expect("Failed to connect");
+    
+            let msg = format!("Rustis 1.0.0\nset\n{}\n{}\n\n", key.trim(), value.trim());
+
+            stream.write_all(msg.as_bytes()).unwrap();
             stream.flush().unwrap();
 
             echo_stream(&mut stream, false).expect("Failed to echo stream");
