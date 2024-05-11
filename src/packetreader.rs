@@ -27,6 +27,11 @@ pub enum RequestPacket {
         key: String,
         value: String,
     },
+    SetEx {
+        key: String,
+        value: String,
+        ttl: u64,
+    },
     Get {
         key: String,
     },
@@ -107,6 +112,37 @@ impl RequestPacket {
                         } else {
                             RequestPacket::Invalid {
                                 error: String::from("missing value")
+                            }
+                        }
+                    } else {
+                        RequestPacket::Invalid {
+                            error: String::from("missing key")
+                        }
+                    }
+                },
+                "setex" => {
+                    let key = lines.get(2);
+                    let ttl = lines.get(3);
+                    let value = lines.get(4..);
+                    if let Some(key) = key {
+                        if let Some(ttl) = ttl {
+                            if let Ok(ttl) = ttl.parse::<u64>() {
+                                if let Some(value) = value {
+                                    let value = value.join("\n");
+                                    RequestPacket::SetEx{ key: key.to_string(), ttl, value: value.to_string() }
+                                } else {
+                                    RequestPacket::Invalid {
+                                        error: String::from("missing value")
+                                    }
+                                }
+                            } else {
+                                RequestPacket::Invalid {
+                                    error: String::from("invalid ttl")
+                                }
+                            }
+                        } else {
+                            RequestPacket::Invalid {
+                                error: String::from("missing ttl")
                             }
                         }
                     } else {
