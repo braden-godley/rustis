@@ -9,7 +9,14 @@ fn main() -> io::Result<()> {
         .subcommand(
             Command::new("server")
                 .about("Runs the server")
-                .arg(arg!(-t --threads <N> "number of tcp threads").default_value("10")),
+                .arg(arg!(-t --threads <N> "number of tcp threads")
+                     .default_value("10")
+                     .value_parser(clap::value_parser!(u16)))
+                .arg(arg!(--host <host> "The host to connect to")
+                     .default_value("127.0.0.1"))
+                .arg(arg!(-p --port <port> "The port to connect to")
+                     .default_value("7878")
+                     .value_parser(clap::value_parser!(u16)))
         )
         .subcommand(
             Command::new("client")
@@ -58,19 +65,18 @@ fn main() -> io::Result<()> {
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("server") {
-        let threads: usize = matches
-            .get_one::<String>("threads")
-            .expect("required")
-            .parse::<usize>()
-            .expect("Invalid thread number");
+        let threads = matches
+            .get_one::<u16>("threads").unwrap();
+        let host = matches.get_one::<String>("host").unwrap();
+        let port = matches.get_one::<u16>("port").unwrap();
 
-        server::start_server(threads)
+        server::start_server(host, *port, *threads)
             .expect("Failed to start Rustis!");
     } else if let Some(matches) = matches.subcommand_matches("client") {
         let host = matches.get_one::<String>("host").unwrap();
         let port = matches.get_one::<u16>("port").unwrap();
 
-        let mut client = client::Client::new(host, &port.to_string(), "1.0.0");
+        let mut client = client::Client::new(host, *port, "1.0.0");
 
         if let Some(matches) = matches.subcommand_matches("publish") {
             let channel = matches.get_one::<String>("channel").unwrap();

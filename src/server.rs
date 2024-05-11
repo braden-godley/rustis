@@ -16,12 +16,12 @@ struct ServerState {
     kv: KvStore,
 }
 
-pub fn start_server(threads: usize) -> io::Result<()> {
+pub fn start_server(host: &str, port: u16, threads: u16) -> io::Result<()> {
     println!("Starting server with {threads} threads!");
 
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
 
-    let address: SocketAddr = "127.0.0.1:7878".parse().unwrap();
+    let address: SocketAddr = format!("{}:{}", host, port).parse().unwrap();
 
     socket.bind(&address.into())?;
     socket.listen(128)?;
@@ -36,7 +36,7 @@ pub fn start_server(threads: usize) -> io::Result<()> {
     let listener: TcpListener = socket.into();
     let ps = PubSub::new();
     let kv = KvStore::new();
-    let tcp_pool = ThreadPool::new(threads);
+    let tcp_pool = ThreadPool::new(threads.into());
 
     let state = ServerState { ps, kv };
     let state = Arc::new(Mutex::new(state));

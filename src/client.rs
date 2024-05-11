@@ -12,7 +12,7 @@ enum EchoType {
 }
 
 impl Client {
-    pub fn new(host: &str, port: &str, version: &str) -> Self {
+    pub fn new(host: &str, port: u16, version: &str) -> Self {
         let connection_url = format!("{}:{}", host, port);
         let stream = TcpStream::connect(&connection_url)
             .expect(&format!("Failed to connect to {}", &connection_url));
