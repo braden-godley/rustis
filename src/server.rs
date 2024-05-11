@@ -1,15 +1,19 @@
 use rustis::pubsub::PubSub;
 use rustis::threadpool::ThreadPool;
 use rustis::packetreader::RequestPacket;
+use rustis::kvstore::KvStore;
+
 use std::io::{prelude::*, self};
-use socket2::{Socket, Domain, Type, TcpKeepalive};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::str;
 
+use socket2::{Socket, Domain, Type, TcpKeepalive};
+
 struct ServerState {
     ps: PubSub,
+    kv: KvStore,
 }
 
 pub fn start_server(threads: usize) -> io::Result<()> {
@@ -31,9 +35,10 @@ pub fn start_server(threads: usize) -> io::Result<()> {
 
     let listener: TcpListener = socket.into();
     let ps = PubSub::new();
+    let kv = KvStore::new();
     let tcp_pool = ThreadPool::new(threads);
 
-    let state = ServerState { ps };
+    let state = ServerState { ps, kv };
     let state = Arc::new(Mutex::new(state));
 
     for stream in listener.incoming() {
@@ -84,6 +89,7 @@ fn process_packet(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, packe
     match packet {
         RequestPacket::Subscribe { channel } => handle_subscribe(stream, state, channel),
         RequestPacket::Publish { channel, message } => handle_publish(stream, state, channel, message),
+        RequestPacket::Set { key, value } => handle_set(stream, state, key, value),
         RequestPacket::Invalid { error } => {
             write_message(stream, &error)
         },
@@ -118,6 +124,12 @@ fn handle_publish(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, chann
         .ps
         .publish(channel, message);
     let _ = write_message(stream, "published");
+}
+
+fn handle_set(stream: &mut TcpStream, state: &Arc<Mutex<ServerState>>, key: String, value: String) {
+    let mut state = state.lock().unwrap();
+    state.kv.set(&key[..], &value[..]);
+    let _ = write_message(stream, "set");
 }
 
 fn write_message(stream: &mut TcpStream, message: &str) {

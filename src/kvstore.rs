@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
 
-struct KvStore {
+pub struct KvStore {
     map: HashMap<String, Val>,
     last_check_time: Instant,
 }
