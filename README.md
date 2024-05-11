@@ -34,6 +34,20 @@ To start a server that clients can send commands to, run the following:
 rustis server
 ```
 
+Rustis binds to `127.0.0.1:7878` by default, but you can also specify a host and/or port:
+
+```sh
+rustis server --host 0.0.0.0 --port 3000
+```
+
+### Running client commands
+
+All `client` commands assume the Rustis server is listening on `127.0.0.1:7878` but you can also specify a host and/or port:
+
+```sh
+rustis client --host 0.0.0.0 --port 3000 <client command here>
+```
+
 ### Publishing a message to a channel
 
 ```sh
