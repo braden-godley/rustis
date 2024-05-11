@@ -65,11 +65,12 @@ impl KvStore {
 
         if let Some(val) = val {
             if let Some(ttl) = val.ttl {
-                let expired = val.created_at.elapsed() > ttl;
+                let elapsed = val.created_at.elapsed();
+                let expired = elapsed > ttl;
                 if expired {
                     None
                 } else {
-                    let time_remaining = val.created_at.elapsed() - ttl;
+                    let time_remaining = ttl - elapsed;
                     Some(time_remaining.as_secs())
                 }
             } else {
