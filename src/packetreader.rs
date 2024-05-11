@@ -1,6 +1,5 @@
 use regex::Regex;
-
-const VERSION: &'static str = "1.0.0";
+use clap::crate_version;
 
 /* Packet format:
 
@@ -49,7 +48,7 @@ impl RequestPacket {
     pub fn new(buf: String) -> Self {
         let lines: Vec<_> = buf.split("\n").collect();
 
-        let version = if let Some(line1) = lines.get(0) {
+        let packet_version = if let Some(line1) = lines.get(0) {
             let re = Regex::new(r"^Rustis (\d{1,3}\.\d{1,4}\.\d{1,4})$").unwrap();
 
             if let Some(caps) = re.captures(line1) {
@@ -61,8 +60,10 @@ impl RequestPacket {
             None
         };
 
-        if let Some(version) = version {
-            if version != VERSION {
+        let current_version = crate_version!();
+
+        if let Some(packet_version) = packet_version {
+            if packet_version != current_version {
                 return RequestPacket::Invalid {
                     error: String::from("version mismatch"),
                 }
@@ -189,7 +190,8 @@ mod test {
     #[test]
     fn publish_packet() {
         let mut buf = String::new();
-        buf.push_str("Rustis 1.0.0\n");
+        let version = crate_version!();
+        buf.push_str(&format!("Rustis {}\n", version));
         buf.push_str("publish\n");
         buf.push_str("channel\n");
         buf.push_str("message");
@@ -205,7 +207,8 @@ mod test {
     #[test]
     fn invalid_version() {
         let mut buf = String::new();
-        buf.push_str("Rustis 99.99.99\n");
+        let version = "999.999.999";
+        buf.push_str(&format!("Rustis {}\n", version));
         buf.push_str("publish\n");
         buf.push_str("channel\n");
         buf.push_str("message\n");
@@ -221,7 +224,8 @@ mod test {
     #[test]
     fn unknown_command() {
         let mut buf = String::new();
-        buf.push_str("Rustis 1.0.0\n");
+        let version = crate_version!();
+        buf.push_str(&format!("Rustis {}\n", version));
         buf.push_str("heebee\n");
 
         let packet = RequestPacket::new(buf);

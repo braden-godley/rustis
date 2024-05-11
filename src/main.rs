@@ -76,7 +76,7 @@ fn main() -> io::Result<()> {
         let host = matches.get_one::<String>("host").unwrap();
         let port = matches.get_one::<u16>("port").unwrap();
 
-        let mut client = client::Client::new(host, *port, "1.0.0");
+        let mut client = client::Client::new(host, *port);
 
         if let Some(matches) = matches.subcommand_matches("publish") {
             let channel = matches.get_one::<String>("channel").unwrap();

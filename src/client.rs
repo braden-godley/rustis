@@ -1,8 +1,8 @@
 use std::net::TcpStream;
 use std::io::{Read, Write, self};
+use clap::crate_version;
 
 pub struct Client {
-    version: String,
     stream: TcpStream,
 }
 
@@ -12,15 +12,13 @@ enum EchoType {
 }
 
 impl Client {
-    pub fn new(host: &str, port: u16, version: &str) -> Self {
+    pub fn new(host: &str, port: u16) -> Self {
         let connection_url = format!("{}:{}", host, port);
         let stream = TcpStream::connect(&connection_url)
             .expect(&format!("Failed to connect to {}", &connection_url));
-        let version = version.to_string();
 
         Client {
             stream,
-            version,
         }
     }
 
@@ -103,7 +101,8 @@ impl Client {
     }
 
     pub fn send(&mut self, command: &str, lines: Vec<&str>) -> io::Result<()> {
-        let version_line = format!("Rustis {}", self.version);
+        let version = crate_version!();
+        let version_line = format!("Rustis {}", version);
         let message = format!("{}\n{}\n{}\n\n", version_line, command, lines.join("\n"));
 
         let bytes = message.as_bytes();
